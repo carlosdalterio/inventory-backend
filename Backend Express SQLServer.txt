@@ -1,0 +1,98 @@
+//Backend Express SQLServer
+
+//The Express backend is configured to: Connect to SQL Server, Fetch building wings (BuildingWing) and Insert and edit components (Component)
+
+// backend/index.js
+const express = require('express');
+const sql = require('mssql');
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+app.use(cors());
+app.use(express.json());
+
+const config = {
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  server: process.env.DB_SERVER,
+  database: process.env.DB_NAME,
+  options: {
+    encrypt: false,
+    trustServerCertificate: true,
+  },
+};
+
+// Test connection
+sql.connect(config).then(pool => {
+  console.log('Connected to SQL Server');
+}).catch(err => console.error('DB connection failed', err));
+
+// Get all Building Wings
+app.get('/api/buildingwings', async (req, res) => {
+  try {
+    const pool = await sql.connect(config);
+    const result = await pool.request().query('SELECT * FROM BuildingWing');
+    res.json(result.recordset);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Add new Component
+app.post('/api/components', async (req, res) => {
+  const {
+    ComponentTypeID, CampusID, FacilityID, BuildingWingID,
+    InstallDate, UniqueTag, Notes, Model, Serial
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(config);
+    await pool.request()
+      .input('ComponentTypeID', sql.Int, ComponentTypeID)
+      .input('CampusID', sql.Int, CampusID)
+      .input('FacilityID', sql.Int, FacilityID)
+      .input('BuildingWingID', sql.Int, BuildingWingID)
+      .input('InstallDate', sql.Date, InstallDate)
+      .input('UniqueTag', sql.VarChar(500), UniqueTag)
+      .input('Notes', sql.VarChar(5000), Notes)
+      .input('Model', sql.VarChar(500), Model)
+      .input('Serial', sql.VarChar(500), Serial)
+      .query(`INSERT INTO Component (ComponentTypeID, CampusID, FacilityID, BuildingWingID, InstallDate, UniqueTag, Notes, CreationDate, CreationUser, Active, Model, Serial)
+              VALUES (@ComponentTypeID, @CampusID, @FacilityID, @BuildingWingID, @InstallDate, @UniqueTag, @Notes, GETDATE(), 'webuser', 'Y', @Model, @Serial)`);
+
+    res.status(201).json({ message: 'Component added' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error inserting component');
+  }
+});
+
+// Update Component by ID
+app.put('/api/components/:id', async (req, res) => {
+  const id = req.params.id;
+  const { Notes, Model, Serial } = req.body;
+
+  try {
+    const pool = await sql.connect(config);
+    await pool.request()
+      .input('Notes', sql.VarChar(5000), Notes)
+      .input('Model', sql.VarChar(500), Model)
+      .input('Serial', sql.VarChar(500), Serial)
+      .input('ComponentID', sql.Int, id)
+      .query(`UPDATE Component SET Notes = @Notes, Model = @Model, Serial = @Serial WHERE ComponentID = @ComponentID`);
+
+    res.status(200).json({ message: 'Component updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error updating component');
+  }
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
