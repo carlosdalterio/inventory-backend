@@ -1,5 +1,3 @@
-
-
 const express = require('express');
 const sql = require('mssql');
 const cors = require('cors');
@@ -13,16 +11,15 @@ app.use(cors());
 const dbConfig = {
     user: process.env.DB_USER || '',
     password: process.env.DB_PASSWORD || '',
-    server: process.env.DB_SERVER || '',   // só o IP, ex: '72.10.106.207'
-    port: parseInt(process.env.DB_PORT || '1433', 10),  // porta padrão ou outra se sua instância usa porta customizada
+    server: process.env.DB_SERVER || '',
     database: process.env.DB_NAME || '',
+    port: parseInt(process.env.DB_PORT || '1433', 10),
     options: {
-        encrypt: true,                  // se seu SQL Server suporta criptografia, use true; caso contrário false
-        trustServerCertificate: true,  // para ignorar certificado SSL autoassinado
-        // NÃO coloque instanceName se usar porta
-    }
+        encrypt: false, // Tente true ou false dependendo do servidor
+        trustServerCertificate: true
+    },
+    connectionTimeout: 30000 // Aumenta o tempo limite
 };
-
 
 // Test route
 app.get('/', (req, res) => {
@@ -36,7 +33,7 @@ app.get('/buildingwings', async (req, res) => {
         const result = await sql.query('SELECT * FROM BuildingWing');
         res.json(result.recordset);
     } catch (err) {
-        console.error(err);
+        console.error('Erro ao consultar BuildingWing:', err);
         res.status(500).send('Database error');
     }
 });
@@ -51,12 +48,10 @@ app.post('/components', async (req, res) => {
             VALUES (${ComponentTypeID}, ${CampusID}, ${FacilityID}, ${BuildingWingID}, ${InstallDate}, ${UniqueTag})`;
         res.status(200).send('Component added');
     } catch (err) {
-        console.error(err);
+        console.error('Erro ao inserir Component:', err);
         res.status(500).send('Database insert error');
     }
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
