@@ -11,14 +11,15 @@ app.use(cors());
 
 // SQL Server config
 const dbConfig = {
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    server: process.env.DB_SERVER,       // ex: '72.10.106.207'
-    database: process.env.DB_NAME,
+    user: process.env.DB_USER || '',
+    password: process.env.DB_PASSWORD || '',
+    server: process.env.DB_SERVER || '',   // só o IP, ex: '72.10.106.207'
+    port: parseInt(process.env.DB_PORT || '1433', 10),  // porta padrão ou outra se sua instância usa porta customizada
+    database: process.env.DB_NAME || '',
     options: {
-        encrypt: false,
-        trustServerCertificate: true,
-        instanceName: process.env.DB_INSTANCE  // aqui a instância, ex: 'GISMSSQLSERVER'
+        encrypt: true,                  // se seu SQL Server suporta criptografia, use true; caso contrário false
+        trustServerCertificate: true,  // para ignorar certificado SSL autoassinado
+        // NÃO coloque instanceName se usar porta
     }
 };
 
